@@ -1,0 +1,18 @@
+[33mcommit 4df20209e17215c37d0036a4f06023f9da7eecee[m
+Author: J1w0n-H <jhwang97@terpmail.umd.edu>
+Date:   Wed Jul 9 18:55:29 2025 +0900
+
+    collect, translate
+
+cafe_main_iframe_debug.html
+config.yaml
+data/Mu_posts_classified.csv
+data/classify_posts.py
+"data/gu_posts - \353\263\265\354\202\254\353\263\270 (2).csv"
+"data/gu_posts - \353\263\265\354\202\254\353\263\270.csv"
+data/gu_posts.csv
+"data/gu_posts_classified - \353\263\265\354\202\254\353\263\270.csv"
+data/gu_posts_classified.csv
+data/gu_posts_translated.csv
+data/mu_posts_translated.csv
+data/translate_posts.py

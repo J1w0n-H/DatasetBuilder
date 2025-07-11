@@ -1,0 +1,45 @@
+name: MissyUSA Pipeline
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'  # 매일 0시 UTC
+
+jobs:
+  run-missyusa-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pandas beautifulsoup4 googletrans==4.0.0-rc1 pyyaml
+
+      - name: Create config_secret.yaml
+        run: |
+          echo "missyusa:" > config_secret.yaml
+          echo "  # 필요시 민감 정보 추가" >> config_secret.yaml
+
+      - name: Run MissyUSA Crawler
+        run: python missyusa_crawler/mu_crawler.py
+
+      - name: Run Translator
+        run: python data/translate_posts.py data/mu_posts.csv data/mu_posts_translated.csv
+
+      - name: Run Classifier
+        run: python data/classify_posts.py data/mu_posts_translated.csv data/mu_posts_translated_classified.csv
+
+      - name: Upload results
+        uses: actions/upload-artifact@v3
+        with:
+          name: missyusa-pipeline-results
+          path: |
+            data/mu_posts.csv
+            data/mu_posts_translated.csv
+            data/mu_posts_translated_classified.csv 

@@ -1,0 +1,28 @@
+# 민감한 설정 파일
+config_secret.yaml
+
+# 데이터 파일들
+data/*.csv
+
+# Python 캐시 파일들
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 가상환경
+venv/
+env/
+.venv/
+
+# IDE 파일들
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 로그 파일들
+*.log
+
+# 임시 파일들
+*.tmp
+*.temp 
