@@ -57,23 +57,30 @@ def get_post_ids_and_contents(data_path):
     return dict(zip(df['id'].astype(str), df['content'].fillna('')))
 
 def save_posts(posts, data_path):
+    columns = ['keyword', 'id', 'title', 'content', 'image_urls', 'url', 'crawled_at']
     df_new = pd.DataFrame(posts)
-    # 오늘 날짜를 id에 'date:YYYY-MM-DD'로 추가 (최상단에)
+    for col in columns:
+        if col not in df_new.columns:
+            df_new[col] = ''
+    df_new = df_new[columns]
+
     today_str = datetime.now().strftime('%Y-%m-%d')
-    date_row = {col: '' for col in df_new.columns}
-    if 'id' in date_row:
-        date_row['id'] = f'date:{today_str}'
-    df_new = pd.concat([pd.DataFrame([date_row]), df_new], ignore_index=True)
+    date_row = {col: '' for col in columns}
+    date_row['id'] = f'최종업데이트:{today_str}'
+
     if os.path.exists(data_path):
         df_old = pd.read_csv(data_path, encoding='utf-8-sig')
-        # 기존 파일에서 첫 행이 id가 'date:'로 시작하면 제거
-        if not df_old.empty and 'id' in df_old.columns and str(df_old.iloc[0].get('id', '')).startswith('date:'):
-            df_old = df_old.iloc[1:]
+        # 기존 날짜 행(최종업데이트:) 모두 제거
+        df_old = df_old[~df_old['id'].astype(str).str.startswith('최종업데이트:')]
+        for col in columns:
+            if col not in df_old.columns:
+                df_old[col] = ''
+        df_old = df_old[columns]
         df_old.set_index('id', inplace=True)
         df_new.set_index('id', inplace=True)
         for idx, row in df_new.iterrows():
             if idx in df_old.index:
-                for col in df_new.columns:
+                for col in columns:
                     old_val = str(df_old.at[idx, col]) if col in df_new.columns else ''
                     new_val = str(row[col])
                     if (not old_val or old_val.strip() == '' or old_val == 'nan') and new_val and new_val.strip() != '' and new_val != 'nan':
@@ -81,10 +88,10 @@ def save_posts(posts, data_path):
             else:
                 df_old.loc[idx] = row
         df = df_old.reset_index()
-        # 최상단에 날짜 행 추가
+        # 오늘 날짜 행을 맨 위에 추가
         df = pd.concat([pd.DataFrame([date_row]), df], ignore_index=True)
     else:
-        df = df_new.reset_index()
+        df = pd.concat([pd.DataFrame([date_row]), df_new], ignore_index=True)
     os.makedirs(os.path.dirname(data_path), exist_ok=True)
     df.to_csv(data_path, index=False, encoding='utf-8-sig')
 
@@ -479,12 +486,12 @@ def crawl_posts(config, data_path):
                         print(f"[DEBUG] title: {title}")
                         print(f"[DEBUG] content: {content[:100]}...")
                         post_data = {
+                            'keyword': keyword,
                             'id': post_id,
                             'title': title,
                             'content': content,
                             'image_urls': ','.join(image_urls),
                             'url': post_url,
-                            'keyword': keyword,
                             'crawled_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                         }
                         save_posts([post_data], data_path)
@@ -595,7 +602,7 @@ def main():
     os.makedirs(os.path.dirname(data_path), exist_ok=True)
     # 파일이 없을 때 posts 컬럼명에 맞는 헤더만 있는 빈 CSV를 생성하도록 main 함수에서 처리. (encoding='utf-8-sig')
     if not os.path.exists(data_path):
-        columns = ['id', 'title', 'content', 'image_urls', 'url', 'keyword', 'crawled_at']
+        columns = ['keyword', 'id', 'title', 'content', 'image_urls', 'url', 'crawled_at']
         import pandas as pd
         pd.DataFrame({col: [] for col in columns}).to_csv(data_path, index=False, encoding='utf-8-sig')
     print(f"[INFO] 데이터 저장 경로: {data_path}")

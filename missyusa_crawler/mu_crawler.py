@@ -43,22 +43,46 @@ def get_post_ids(data_path):
     return set(df['id'].astype(str))
 
 def save_posts(posts, data_path):
-    df = pd.DataFrame(posts)
-    # 오늘 날짜를 id에 'date:YYYY-MM-DD'로 추가 (최상단에)
+    print(f"[DEBUG] save_posts called with {len(posts)} posts, path: {data_path}")
+    columns = ['keyword', 'id', 'title', 'content', 'image_urls', 'url', 'crawled_at']
+    df_new = pd.DataFrame(posts)
+    for col in columns:
+        if col not in df_new.columns:
+            df_new[col] = ''
+    df_new = df_new[columns]
+
     today_str = datetime.now().strftime('%Y-%m-%d')
-    date_row = {col: '' for col in df.columns}
-    if 'id' in date_row:
-        date_row['id'] = f'date:{today_str}'
-    df = pd.concat([pd.DataFrame([date_row]), df], ignore_index=True)
+    date_row = {col: '' for col in columns}
+    date_row['id'] = f'최종업데이트:{today_str}'
+
     if os.path.exists(data_path):
         df_old = pd.read_csv(data_path, encoding='euc-kr')
-        # 기존 파일에서 첫 행이 id가 'date:'로 시작하면 제거
-        if 'id' in df_old.columns and str(df_old.iloc[0].get('id', '')).startswith('date:'):
-            df_old = df_old.iloc[1:]
-        df = pd.concat([df_old, df], ignore_index=True)
-        df = df.drop_duplicates(subset=['id'])
+        # 기존 날짜 행(최종업데이트:) 모두 제거
+        df_old = df_old[~df_old['id'].astype(str).str.startswith('최종업데이트:')]
+        for col in columns:
+            if col not in df_old.columns:
+                df_old[col] = ''
+        df_old = df_old.loc[:, columns]  # DataFrame 속성 유지
+        df_old.set_index('id', inplace=True)
+        df_new.set_index('id', inplace=True)
+        for idx, row in df_new.iterrows():
+            if idx in df_old.index:
+                for col in columns:
+                    old_val = str(df_old.at[idx, col]) if col in df_new.columns else ''
+                    new_val = str(row[col])
+                    if (not old_val or old_val.strip() == '' or old_val == 'nan') and new_val and new_val.strip() != '' and new_val != 'nan':
+                        df_old.at[idx, col] = new_val
+            else:
+                df_old.loc[idx] = row
+        df = df_old.reset_index()
+        # 오늘 날짜 행을 맨 위에 추가
+        df = pd.concat([pd.DataFrame([date_row]), df], ignore_index=True)
+    else:
+        df = pd.concat([pd.DataFrame([date_row]), df_new], ignore_index=True)
     os.makedirs(os.path.dirname(data_path), exist_ok=True)
+    print(f"[DEBUG] DataFrame to save: {df.shape}")
     df.to_csv(data_path, index=False, encoding='euc-kr', errors='ignore')
+    print(f"[DEBUG] File saved: {data_path}")
 
 def get_post_content(post_url):
     try:
@@ -148,21 +172,22 @@ def crawl_posts(config, data_path):
                 title = a.get_text(strip=True)
                 content, image_urls = get_post_content(post_url)
                 new_posts.append({
+                    'keyword': keyword,
                     'id': post_id,
-                    'url': post_url,
                     'title': title,
                     'content': content,
                     'image_urls': ','.join(image_urls),
-                    'keyword': keyword,
+                    'url': post_url,
                     'crawled_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 })
+            print(f"[DEBUG] new_posts: {len(new_posts)}")
             if new_posts:
-                print(f"[INFO] {len(new_posts)} new posts saved.")
                 all_new_posts.extend(new_posts)
             else:
                 print("[INFO] No new posts found on this page.")
             page += 1
             time.sleep(1)  # 페이지당 딜레이
+    print(f"[DEBUG] all_new_posts: {len(all_new_posts)}")
     if all_new_posts:
         save_posts(all_new_posts, data_path)
     else:
@@ -178,7 +203,7 @@ def main():
     os.makedirs(os.path.dirname(data_path), exist_ok=True)
     # 파일이 없으면 빈 파일 생성
     if not os.path.exists(data_path):
-        columns = ['id', 'title', 'content', 'image_urls', 'url', 'keyword', 'crawled_at']
+        columns = ['keyword', 'id', 'title', 'content', 'image_urls', 'url', 'crawled_at']
         pd.DataFrame({col: [] for col in columns}).to_csv(data_path, index=False, encoding='euc-kr')
     print(f"[INFO] 데이터 저장 경로: {data_path}")
     while True:

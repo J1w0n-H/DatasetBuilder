@@ -42,12 +42,12 @@ def main():
     eng_titles = []
     eng_contents = []
     total = len(df)
-    for i, row in df.iterrows():
+    for idx, (i, row) in enumerate(df.iterrows()):
         if str(row.get('id', '')).startswith('date:'):
             eng_titles.append("")
             eng_contents.append("")
             continue
-        print(f"{i+1}/{total} 번역중...")
+        print(f"{idx + 1}/{total} 번역중...")
         eng_titles.append(safe_translate(row["title"], translator))
         eng_contents.append(safe_translate(row["content"], translator))
     df["Eng_title"] = eng_titles

@@ -1,6 +1,7 @@
 keywords:
   - "스캠"
-interval_minutes: 10
+  - "scam"
+interval_minutes: 60
 
 text_classification:
 
